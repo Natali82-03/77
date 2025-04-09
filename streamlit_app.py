@@ -5,13 +5,17 @@ import plotly.graph_objects as go
 import base64
 from io import BytesIO
 
-# --- Настройка страницы и фона ---
+# --- Настройка фона ---
 def set_bg_image():
+    with open('fon.jpg', "rb") as f:
+        img_data = f.read()
+    img_base64 = base64.b64encode(img_data).decode()
+    
     st.markdown(
         f"""
         <style>
         .stApp {{
-            background-image: url("data:image/jpg;base64,{base64.b64encode(open('fon.jpg', "rb").read().decode()}");
+            background-image: url("data:image/jpg;base64,{img_base64}");
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -27,7 +31,6 @@ set_bg_image()
 # --- Загрузка данных ---
 @st.cache_data
 def load_data(file_name):
-    # Ваша существующая функция загрузки данных
     try:
         df = pd.read_csv(file_name, sep=';', encoding='utf-8')
     except:
