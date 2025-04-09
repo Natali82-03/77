@@ -64,6 +64,14 @@ with st.sidebar:
         default=["Дети 1-6 лет", "Среднегодовая численность"]
     )
     
+    # Новый блок для выбора долей
+    st.title("Доля от общей численности населения")
+    share_topics = st.multiselect(
+        "Выберите категории для отображения доли:",
+        [k for k in data_dict.keys() if k != "Среднегодовая численность"],
+        default=["Дети 1-6 лет"]
+    )
+    
     # Выбор года для Топ-5
     selected_year = st.selectbox(
         "Год для анализа Топ-5:",
@@ -105,7 +113,7 @@ if selected_topics:
     st.plotly_chart(fig, use_container_width=True)
     
     # 1.5. График процентного отношения к среднегодовой численности
-    if "Среднегодовая численность" in data_dict and len(selected_topics) > 1:
+    if share_topics and "Среднегодовая численность" in data_dict:
         st.subheader("Доля категории от среднегодовой численности (%)")
         fig_percent = go.Figure()
         
@@ -113,26 +121,25 @@ if selected_topics:
         rpop_df = data_dict["Среднегодовая численность"][0]
         rpop_data = rpop_df[rpop_df['Name'] == selected_location]
         
-        for topic in selected_topics:
-            if topic != "Среднегодовая численность":
-                df, color = data_dict[topic]
-                location_data = df[df['Name'] == selected_location]
-                years = [str(year) for year in range(2019, 2025)]
-                values = location_data[years].values.flatten()
-                rpop_values = rpop_data[years].values.flatten()
-                
-                # Рассчитываем процентное отношение
-                percentages = [round((value / rpop_value) * 100, 2) if rpop_value != 0 else 0 
-                             for value, rpop_value in zip(values, rpop_values)]
-                
-                fig_percent.add_trace(go.Scatter(
-                    x=years,
-                    y=percentages,
-                    name=f"{topic} (%)",
-                    line=dict(color=color, width=3),
-                    mode='lines+markers',
-                    hovertemplate="<b>%{x}</b><br>%{y:.2f}%<extra></extra>"
-                ))
+        for topic in share_topics:
+            df, color = data_dict[topic]
+            location_data = df[df['Name'] == selected_location]
+            years = [str(year) for year in range(2019, 2025)]
+            values = location_data[years].values.flatten()
+            rpop_values = rpop_data[years].values.flatten()
+            
+            # Рассчитываем процентное отношение
+            percentages = [round((value / rpop_value) * 100, 2) if rpop_value != 0 else 0 
+                         for value, rpop_value in zip(values, rpop_values)]
+            
+            fig_percent.add_trace(go.Scatter(
+                x=years,
+                y=percentages,
+                name=f"{topic} (%)",
+                line=dict(color=color, width=3),
+                mode='lines+markers',
+                hovertemplate="<b>%{x}</b><br>%{y:.2f}%<extra></extra>"
+            ))
         
         fig_percent.update_layout(
             xaxis_title="Год",
