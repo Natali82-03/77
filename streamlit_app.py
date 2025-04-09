@@ -158,7 +158,62 @@ if selected_topics:
             template="plotly_white"
         )
         st.plotly_chart(fig_percent, use_container_width=True)
+        # Добавляем этот код после блока с графиком процентного отношения (до раздела с рейтингами)
 
+    # 1.6. Столбчатый график долей для всех населённых пунктов
+    if share_topics and "Среднегодовая численность" in data_dict and len(share_topics) == 1:
+        st.subheader(f"Доля {share_topics[0]} от общей численности по всем населённым пунктам ({selected_year} год)")
+        
+        # Получаем данные для выбранной категории и общей численности
+        topic_df, topic_color = data_dict[share_topics[0]]
+        rpop_df = data_dict["Среднегодовая численность"][0]
+        
+        # Объединяем данные
+        merged_df = pd.merge(
+            topic_df[['Name', selected_year]],
+            rpop_df[['Name', selected_year]],
+            on='Name',
+            suffixes=('_topic', '_rpop')
+        )
+        
+        # Рассчитываем долю
+        merged_df['Доля (%)'] = (merged_df[f'{selected_year}_topic'] / merged_df[f'{selected_year}_rpop']) * 100
+        merged_df['Доля (%)'] = merged_df['Доля (%)'].round(2)
+        
+        # Сортируем по убыванию доли
+        merged_df = merged_df.sort_values('Доля (%)', ascending=False)
+        
+        # Создаём график
+        fig_all_locations = px.bar(
+            merged_df,
+            x='Name',
+            y='Доля (%)',
+            color_discrete_sequence=[topic_color],
+            labels={'Name': 'Населённый пункт', 'Доля (%)': f'Доля {share_topics[0]} (%)'},
+            height=600
+        )
+        
+        # Настраиваем отображение
+        fig_all_locations.update_layout(
+            xaxis_title="Населённый пункт",
+            yaxis_title=f"Доля {share_topics[0]} от общей численности (%)",
+            xaxis={'categoryorder':'total descending'},
+            hovermode="x",
+            template="plotly_white",
+            showlegend=False
+        )
+        
+        # Добавляем горизонтальную линию для среднего значения
+        mean_value = merged_df['Доля (%)'].mean()
+        fig_all_locations.add_hline(
+            y=mean_value,
+            line_dash="dot",
+            line_color="gray",
+            annotation_text=f"Среднее: {mean_value:.2f}%",
+            annotation_position="bottom right"
+        )
+        
+        st.plotly_chart(fig_all_locations, use_container_width=True)
     # 2. Рейтинг и антирейтинг Топ-5
     st.subheader(f"Рейтинги населённых пунктов ({selected_year} год)")
     
