@@ -87,71 +87,81 @@ with st.sidebar:
 # --- Основной интерфейс ---
 st.title(f"📊 Демографические показатели: {selected_location}")
 
-# 1. Пузырьковый график динамики численности
+# 1. Пузырьковый график динамики численности (с группировкой по годам)
 if selected_topics:
-    st.subheader("Динамика численности (пузырьковый график)")
+    st.subheader("Динамика численности (группировка по годам)")
     
-    # Собираем все данные для графика
-    plot_data = []
-    for topic in selected_topics:
-        df, color = data_dict[topic]
-        location_data = df[df['Name'] == selected_location]
-        for year in available_years:
-            value = location_data[year].values[0]
-            plot_data.append({
-                'Категория': topic,
-                'Год': year,
-                'Численность': value,
-                'Цвет': color
-            })
+    # Создаем список всех годов с повторением для каждой категории
+    years_list = []
+    categories_list = []
+    values_list = []
+    colors_list = []
     
-    # Создаем DataFrame для графика
-    plot_df = pd.DataFrame(plot_data)
+    for year in available_years:
+        for topic in selected_topics:
+            df, color = data_dict[topic]
+            value = df[df['Name'] == selected_location][year].values[0]
+            years_list.append(year)
+            categories_list.append(topic)
+            values_list.append(value)
+            colors_list.append(color)
     
-    # Создаем пузырьковый график с новыми настройками
-    fig = px.scatter(
-        plot_df,
-        x='Год',
-        y='Категория',
-        size='Численность',
-        color='Категория',
-        color_discrete_map={topic: color for topic, (_, color) in data_dict.items()},
-        hover_name='Категория',
-        hover_data={'Год': True, 'Численность': ':,', 'Категория': False},
-        size_max=60,  # Увеличиваем максимальный размер пузырьков
-        height=600,   # Увеличиваем высоту графика
-        opacity=0.7,  # Полупрозрачность пузырьков
-        # Настройки для более плотного расположения
-        category_orders={"Категория": selected_topics}  # Сохраняем порядок категорий
-    )
+    # Создаем пузырьковый график с группировкой
+    fig = go.Figure()
+    
+    # Добавляем пузырьки для каждого года отдельно
+    for i, year in enumerate(available_years):
+        # Фильтруем данные только для текущего года
+        year_mask = [y == year for y in years_list]
+        year_categories = [c for c, mask in zip(categories_list, year_mask) if mask]
+        year_values = [v for v, mask in zip(values_list, year_mask) if mask]
+        year_colors = [c for c, mask in zip(colors_list, year_mask) if mask]
+        
+        # Добавляем след для каждого года
+        fig.add_trace(go.Scatter(
+            x=[i]*len(year_categories),  # Позиция на оси X (номер года)
+            y=year_categories,
+            text=year_values,
+            mode='markers',
+            marker=dict(
+                size=year_values,
+                sizemode='area',
+                sizeref=2.*max(values_list)/(40.**2),
+                sizemin=4,
+                color=year_colors,
+                opacity=0.7,
+                line=dict(width=1, color='DarkSlateGrey')
+            ),
+            name=str(year),
+            hovertemplate="<b>%{y}</b><br>Год: %{text}<br>Численность: %{marker.size:,} чел.<extra></extra>"
+        ))
     
     # Настраиваем отображение
     fig.update_layout(
-        xaxis_title="Год",
-        yaxis_title="Категория",
+        xaxis=dict(
+            tickvals=list(range(len(available_years))),
+            ticktext=available_years,
+            title="Год"
+        ),
+        yaxis=dict(
+            title="Категория",
+            categoryorder='array',
+            categoryarray=selected_topics
+        ),
         hovermode="closest",
-        # Уменьшаем расстояние между категориями
-        yaxis={'categoryorder': 'array', 'categoryarray': selected_topics},
-        # Настройки для более компактного вида
-        margin={'l': 100, 'r': 100, 't': 50, 'b': 100},
-        # Увеличиваем плотность меток на оси X
-        xaxis={'tickmode': 'linear', 'tick0': 0, 'dtick': 1},
-        template="plotly_white",
-        showlegend=False
+        showlegend=False,
+        height=600,
+        template="plotly_white"
     )
     
-    # Настраиваем внешний вид пузырьков
-    fig.update_traces(
-        hovertemplate="<b>%{hovertext}</b><br>Год: %{x}<br>Численность: %{customdata[0]:,} чел.",
-        marker=dict(
-            line=dict(width=1, color='DarkSlateGrey'),
-            opacity=0.7,  # Дополнительная настройка прозрачности
-            sizemode='diameter',  # Режим размера по диаметру
-            sizeref=0.1,  # Коэффициент масштабирования размера
-        ),
-        # Настройки для более плотного расположения точек
-        jitter=0.2,  # Добавляем небольшой разброс по вертикали
-    )
+    # Добавляем вертикальные линии для разделения годов
+    for i in range(len(available_years)):
+        fig.add_vline(
+            x=i-0.5,
+            line_width=1,
+            line_dash="dot",
+            line_color="grey"
+        )
     
     st.plotly_chart(fig, use_container_width=True)
 
