@@ -90,34 +90,58 @@ with st.sidebar:
 # --- Основной интерфейс ---
 st.title(f"📊 Демографические показатели: {selected_location}")
 
-# 1. Интерактивный линейный график динамики
+# Заменяем текущий код графика динамики численности на этот:
+
+# 1. Пузырьковый график динамики численности
 if selected_topics:
-    st.subheader("Динамика численности")
-    fig = go.Figure()
+    st.subheader("Динамика численности (пузырьковый график)")
     
+    # Собираем все данные для графика
+    plot_data = []
     for topic in selected_topics:
         df, color = data_dict[topic]
         location_data = df[df['Name'] == selected_location]
-        years = available_years  # Используем вместо [str(year) for year in range(2019, 2025)]
-        values = location_data[years].values.flatten()
-        
-        fig.add_trace(go.Scatter(
-            x=years,
-            y=values,
-            name=topic,
-            line=dict(color=color, width=3),
-            mode='lines+markers',
-            hovertemplate="<b>%{x}</b><br>%{y:,} чел.<extra></extra>"
-        ))
+        for year in available_years:
+            value = location_data[year].values[0]
+            plot_data.append({
+                'Категория': topic,
+                'Год': year,
+                'Численность': value,
+                'Цвет': color
+            })
     
+    # Создаем DataFrame для графика
+    plot_df = pd.DataFrame(plot_data)
+    
+    # Создаем пузырьковый график
+    fig = px.scatter(
+        plot_df,
+        x='Год',
+        y='Категория',
+        size='Численность',
+        color='Категория',
+        color_discrete_map={topic: color for topic, (_, color) in data_dict.items()},
+        hover_name='Категория',
+        hover_data={'Год': True, 'Численность': ':,', 'Категория': False},
+        size_max=40,
+        height=500
+    )
+    
+    # Настраиваем отображение
     fig.update_layout(
         xaxis_title="Год",
-        yaxis_title="Численность (чел.)",
-        hovermode="x unified",
+        yaxis_title="Категория",
+        hovermode="closest",
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
-        height=500,
-        template="plotly_white"
+        template="plotly_white",
+        showlegend=False
     )
+    
+    # Добавляем подсказки
+    fig.update_traces(
+        hovertemplate="<b>%{hovertext}</b><br>Год: %{x}<br>Численность: %{customdata[0]:,} чел.",
+        marker=dict(line=dict(width=1, color='DarkSlateGrey'))
+    
     st.plotly_chart(fig, use_container_width=True)
     
     # 1.5. График процентного отношения к среднегодовой численности
