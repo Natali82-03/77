@@ -131,7 +131,8 @@ if selected_topics:
     fig.update_traces(
         hovertemplate="<b>%{hovertext}</b><br>Год: %{x}<br>Численность: %{customdata[0]:,} чел.",
         marker=dict(line=dict(width=1, color='DarkSlateGrey'))
-    
+        )  # <- Закрывающая скобка была пропущена
+
     st.plotly_chart(fig, use_container_width=True)
 
 # 2. График долей для выбранного пункта
