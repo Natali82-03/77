@@ -28,7 +28,14 @@ def load_data(file_name):
         df = df.rename(columns={'Наименование муниципального образования': 'Name'})
     df['Name'] = df['Name'].str.strip()
     return df
-
+# Функция для определения доступных годов из данных
+def get_available_years(df_dict):
+    years = set()
+    for df, _ in df_dict.values():
+        # Ищем колонки, которые являются годами (состоят из 4 цифр)
+        year_columns = [col for col in df.columns if col.isdigit() and len(col) == 4]
+        years.update(year_columns)
+    return sorted(years, key=int)
 # Загрузка всех файлов
 try:
     ch_1_6 = load_data('Ch_1_6.csv')      # Дети 1-6 лет
@@ -72,11 +79,12 @@ with st.sidebar:
         default=["Дети 1-6 лет"]
     )
     
-    # Выбор года для Топ-5
+    # В боковой панели (заменяем текущий selectbox для года)
+    available_years = get_available_years(data_dict)
     selected_year = st.selectbox(
         "Год для анализа Топ-5:",
-        [str(year) for year in range(2019, 2025)],
-        index=0
+        available_years,
+        index=len(available_years)-1  # По умолчанию выбираем последний год
     )
 
 # --- Основной интерфейс ---
