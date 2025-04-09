@@ -98,7 +98,7 @@ if selected_topics:
     for topic in selected_topics:
         df, color = data_dict[topic]
         location_data = df[df['Name'] == selected_location]
-        years = [str(year) for year in range(2019, 2025)]
+        years = available_years  # Используем вместо [str(year) for year in range(2019, 2025)]
         values = location_data[years].values.flatten()
         
         fig.add_trace(go.Scatter(
