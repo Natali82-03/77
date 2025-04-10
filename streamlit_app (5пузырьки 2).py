@@ -296,12 +296,12 @@ if selected_topics:
             st.plotly_chart(fig_bottom, use_container_width=True)
 
 # 5. Корреляция между выбранной категорией и жильем
-if correlation_topic:
-    st.subheader(f"Корреляция между {correlation_topic} и жилой площадью ({selected_year} год)")
+if correlation_topic_housing:
+    st.subheader(f"Корреляция между {correlation_topic_housing} и жилой площадью ({selected_year} год)")
     
     try:
         # Получаем данные для выбранной категории и жилья
-        topic_df, topic_color = population_data_dict[correlation_topic]
+        topic_df, topic_color = population_data_dict[correlation_topic_housing]
         housing_df, housing_color = housing_data
         
         # Объединяем данные, удаляем строки с пропущенными значениями
