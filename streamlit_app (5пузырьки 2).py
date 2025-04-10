@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import chardet
 from io import BytesIO
+import numpy as np
 
 # Конфигурация страницы
 st.set_page_config(layout="wide", page_title="Демография Орловской области")
@@ -43,6 +44,7 @@ try:
     ch_5_18 = load_data('Ch_5_18.csv')
     pop_3_79 = load_data('Pop_3_79.csv')
     rpop = load_data('RPop.csv')
+    housing = load_data('housing.csv')
 except Exception as e:
     st.error(f"Ошибка загрузки данных: {str(e)}")
     st.stop()
@@ -53,7 +55,8 @@ data_dict = {
     "Дети 3-18 лет": (ch_3_18, "#ff7f0e"),
     "Дети 5-18 лет": (ch_5_18, "#2ca02c"),
     "Население 3-79 лет": (pop_3_79, "#d62728"),
-    "Среднегодовая численность": (rpop, "#9467bd")
+    "Среднегодовая численность": (rpop, "#9467bd"),
+    "Общая площадь жилых помещений": (housing, "#8c564b")
 }
 
 available_years = get_available_years(data_dict)
@@ -82,6 +85,14 @@ with st.sidebar:
         "Год для анализа:",
         available_years,
         index=len(available_years)-1
+    )
+    
+    # Новый блок для выбора категории для корреляции с жильем
+    st.title("Корреляция с жильем")
+    correlation_topic = st.selectbox(
+        "Выберите категорию для корреляции с жильем:",
+        [k for k in data_dict.keys() if k != "Общая площадь жилых помещений"],
+        index=0
     )
 
 # --- Основной интерфейс ---
@@ -279,7 +290,65 @@ if selected_topics:
             )
             st.plotly_chart(fig_bottom, use_container_width=True)
 
-# 5. Экспорт данных
+# 5. Новый блок: Корреляция между выбранной категорией и жильем
+if correlation_topic and "Общая площадь жилых помещений" in data_dict:
+    st.subheader(f"Корреляция между {correlation_topic} и жилой площадью ({selected_year} год)")
+    
+    # Получаем данные для выбранной категории и жилья
+    topic_df, topic_color = data_dict[correlation_topic]
+    housing_df, housing_color = data_dict["Общая площадь жилых помещений"]
+    
+    # Объединяем данные
+    merged = pd.merge(
+        topic_df[['Name', selected_year]],
+        housing_df[['Name', selected_year]],
+        on='Name',
+        suffixes=('_pop', '_housing')
+    )
+    
+    # Рассчитываем корреляцию
+    corr = np.corrcoef(merged[f'{selected_year}_pop'], merged[f'{selected_year}_housing'])[0, 1]
+    
+    # Создаем график рассеяния
+    fig_corr = px.scatter(
+        merged,
+        x=f'{selected_year}_pop',
+        y=f'{selected_year}_housing',
+        hover_data=['Name'],
+        labels={
+            f'{selected_year}_pop': f'{correlation_topic} (чел.)',
+            f'{selected_year}_housing': 'Общая площадь жилья (кв.м/чел.)'
+        },
+        trendline="ols",
+        color_discrete_sequence=[topic_color]
+    )
+    
+    # Добавляем информацию о корреляции
+    fig_corr.update_layout(
+        title=f"Коэффициент корреляции: {corr:.2f}",
+        height=600
+    )
+    
+    # Добавляем точку для выбранного населенного пункта
+    selected_data = merged[merged['Name'] == selected_location]
+    if not selected_data.empty:
+        fig_corr.add_trace(go.Scatter(
+            x=selected_data[f'{selected_year}_pop'],
+            y=selected_data[f'{selected_year}_housing'],
+            mode='markers',
+            marker=dict(
+                color='red',
+                size=12,
+                line=dict(width=2, color='black')
+            ),
+            name=f"Выбранный пункт: {selected_location}",
+            hoverinfo='text',
+            hovertext=f"{selected_location}<br>{correlation_topic}: {selected_data[f'{selected_year}_pop'].values[0]}<br>Жилье: {selected_data[f'{selected_year}_housing'].values[0]}"
+        ))
+    
+    st.plotly_chart(fig_corr, use_container_width=True)
+
+# 6. Экспорт данных
 st.subheader("📤 Экспорт данных")
 exp_col1, exp_col2 = st.columns(2)
 
