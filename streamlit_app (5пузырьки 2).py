@@ -49,17 +49,18 @@ except Exception as e:
     st.error(f"Ошибка загрузки данных: {str(e)}")
     st.stop()
 
-# Словарь данных
-data_dict = {
+# Словари данных
+population_data_dict = {
     "Дети 1-6 лет": (ch_1_6, "#1f77b4"),
     "Дети 3-18 лет": (ch_3_18, "#ff7f0e"),
     "Дети 5-18 лет": (ch_5_18, "#2ca02c"),
     "Население 3-79 лет": (pop_3_79, "#d62728"),
-    "Среднегодовая численность": (rpop, "#9467bd"),
-    "Общая площадь жилых помещений": (housing, "#8c564b")
+    "Среднегодовая численность": (rpop, "#9467bd")
 }
 
-available_years = get_available_years(data_dict)
+housing_data = (housing, "#8c564b")
+
+available_years = get_available_years(population_data_dict)
 
 # --- Боковая панель ---
 with st.sidebar:
@@ -70,14 +71,14 @@ with st.sidebar:
     
     selected_topics = st.multiselect(
         "Категории населения:",
-        list(data_dict.keys()),
+        list(population_data_dict.keys()),
         default=["Дети 1-6 лет", "Среднегодовая численность"]
     )
     
     st.title("Доля от общей численности")
     share_topics = st.multiselect(
         "Выберите категории для анализа долей:",
-        [k for k in data_dict.keys() if k != "Среднегодовая численность"],
+        [k for k in population_data_dict.keys() if k != "Среднегодовая численность"],
         default=["Дети 1-6 лет"]
     )
     
@@ -91,7 +92,7 @@ with st.sidebar:
     st.title("Корреляция с жильем")
     correlation_topic = st.selectbox(
         "Выберите категорию для корреляции с жильем:",
-        [k for k in data_dict.keys() if k != "Общая площадь жилых помещений"],
+        list(population_data_dict.keys()),
         index=0
     )
 
@@ -110,7 +111,7 @@ if selected_topics:
     
     for year in available_years:
         for topic in selected_topics:
-            df, color = data_dict[topic]
+            df, color = population_data_dict[topic]
             value = df[df['Name'] == selected_location][year].values[0]
             years_list.append(year)
             categories_list.append(topic)
@@ -177,15 +178,15 @@ if selected_topics:
     st.plotly_chart(fig, use_container_width=True)
 
 # 2. График долей для выбранного пункта
-if share_topics and "Среднегодовая численность" in data_dict:
+if share_topics and "Среднегодовая численность" in population_data_dict:
     st.subheader(f"Доля от общей численности в {selected_location}")
     fig_percent = go.Figure()
     
-    rpop_data = data_dict["Среднегодовая численность"][0]
+    rpop_data = population_data_dict["Среднегодовая численность"][0]
     rpop_values = rpop_data[rpop_data['Name'] == selected_location][available_years].values.flatten()
     
     for topic in share_topics:
-        df, color = data_dict[topic]
+        df, color = population_data_dict[topic]
         values = df[df['Name'] == selected_location][available_years].values.flatten()
         
         percentages = [round((v/rpop)*100, 2) if rpop !=0 else 0 
@@ -211,11 +212,11 @@ if share_topics and "Среднегодовая численность" in data_
     st.plotly_chart(fig_percent, use_container_width=True)
 
 # 3. График долей по всем населённым пунктам
-if share_topics and len(share_topics) == 1 and "Среднегодовая численность" in data_dict:
+if share_topics and len(share_topics) == 1 and "Среднегодовая численность" in population_data_dict:
     st.subheader(f"Сравнение долей {share_topics[0]} по населённым пунктам ({selected_year} год)")
     
-    topic_df, topic_color = data_dict[share_topics[0]]
-    rpop_df = data_dict["Среднегодовая численность"][0]
+    topic_df, topic_color = population_data_dict[share_topics[0]]
+    rpop_df = population_data_dict["Среднегодовая численность"][0]
     
     merged = pd.merge(
         topic_df[['Name', selected_year]],
@@ -260,7 +261,7 @@ if selected_topics:
     st.subheader(f"Рейтинги населённых пунктов ({selected_year} год)")
     
     for topic in selected_topics:
-        df, color = data_dict[topic]
+        df, color = population_data_dict[topic]
         
         col1, col2 = st.columns(2)
         
@@ -290,14 +291,14 @@ if selected_topics:
             )
             st.plotly_chart(fig_bottom, use_container_width=True)
 
-# 5. Новый блок: Корреляция между выбранной категорией и жильем
-if correlation_topic and "Общая площадь жилых помещений" in data_dict:
+# 5. Корреляция между выбранной категорией и жильем
+if correlation_topic:
     st.subheader(f"Корреляция между {correlation_topic} и жилой площадью ({selected_year} год)")
     
     try:
         # Получаем данные для выбранной категории и жилья
-        topic_df, topic_color = data_dict[correlation_topic]
-        housing_df, housing_color = data_dict["Общая площадь жилых помещений"]
+        topic_df, topic_color = population_data_dict[correlation_topic]
+        housing_df, housing_color = housing_data
         
         # Объединяем данные, удаляем строки с пропущенными значениями
         merged = pd.merge(
@@ -311,7 +312,7 @@ if correlation_topic and "Общая площадь жилых помещени�
         if len(merged) < 2:
             st.warning("Недостаточно данных для вычисления корреляции. Требуется минимум 2 точки.")
         else:
-            # Преобразуем данные в числовой формат (на случай, если они загружены как строки)
+            # Преобразуем данные в числовой формат
             merged[f'{selected_year}_pop'] = pd.to_numeric(
                 merged[f'{selected_year}_pop'].astype(str).str.replace(',', '.'), 
                 errors='coerce'
@@ -378,7 +379,7 @@ st.subheader("📤 Экспорт данных")
 exp_col1, exp_col2 = st.columns(2)
 
 for topic in selected_topics:
-    df, _ = data_dict[topic]
+    df, _ = population_data_dict[topic]
     
     with exp_col1:
         st.download_button(
