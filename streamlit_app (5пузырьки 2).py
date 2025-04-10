@@ -103,10 +103,22 @@ available_years = get_available_years(population_data_dict)
 
 # --- Боковая панель с логотипом и настройками ---
 with st.sidebar:
-    # Логотип с выравниванием по центру
+    # Логотип с выравниванием по центру и настройкой размера
+    logo_width = st.slider(
+        "Размер логотипа", 
+        min_value=100, 
+        max_value=1000, 
+        value=300,  # Начальное значение
+        step=50,
+        key="logo_size_slider"
+    )
+    
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.image("ogm.png", width=900)  # Ширину можно менять
+        st.image("ogm.png", width=logo_width)
+    
+    st.markdown("---")  # Разделительная линия
+    st.title("Настройки анализа")
     
     st.markdown("---")  # Разделительная линия
     st.title("Настройки анализа")
