@@ -266,7 +266,7 @@ if share_topic and "Среднегодовая численность" in popula
 if share_topic and "Среднегодовая численность" in population_data_dict:  # Убрали проверку len()
     st.subheader(f"Сравнение долей {share_topic} по населённым пунктам ({selected_year} год)") 
     
-    topic_df, topic_color = population_data_dict[share_topics[0]]
+    topic_df, topic_color = population_data_dict[share_topic]
     rpop_df = population_data_dict["Среднегодовая численность"][0]
     
     merged = pd.merge(
