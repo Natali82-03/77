@@ -106,7 +106,7 @@ with st.sidebar:
     # Логотип с выравниванием по центру
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.image("ogm.png", width=300)  # Ширину можно менять
+        st.image("ogm.png", width=900)  # Ширину можно менять
     
     st.markdown("---")  # Разделительная линия
     st.title("Настройки анализа")
