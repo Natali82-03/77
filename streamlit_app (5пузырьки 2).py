@@ -294,59 +294,76 @@ if selected_topics:
 if correlation_topic and "Общая площадь жилых помещений" in data_dict:
     st.subheader(f"Корреляция между {correlation_topic} и жилой площадью ({selected_year} год)")
     
-    # Получаем данные для выбранной категории и жилья
-    topic_df, topic_color = data_dict[correlation_topic]
-    housing_df, housing_color = data_dict["Общая площадь жилых помещений"]
-    
-    # Объединяем данные
-    merged = pd.merge(
-        topic_df[['Name', selected_year]],
-        housing_df[['Name', selected_year]],
-        on='Name',
-        suffixes=('_pop', '_housing')
-    )
-    
-    # Рассчитываем корреляцию
-    corr = np.corrcoef(merged[f'{selected_year}_pop'], merged[f'{selected_year}_housing'])[0, 1]
-    
-    # Создаем график рассеяния
-    fig_corr = px.scatter(
-        merged,
-        x=f'{selected_year}_pop',
-        y=f'{selected_year}_housing',
-        hover_data=['Name'],
-        labels={
-            f'{selected_year}_pop': f'{correlation_topic} (чел.)',
-            f'{selected_year}_housing': 'Общая площадь жилья (кв.м/чел.)'
-        },
-        trendline="ols",
-        color_discrete_sequence=[topic_color]
-    )
-    
-    # Добавляем информацию о корреляции
-    fig_corr.update_layout(
-        title=f"Коэффициент корреляции: {corr:.2f}",
-        height=600
-    )
-    
-    # Добавляем точку для выбранного населенного пункта
-    selected_data = merged[merged['Name'] == selected_location]
-    if not selected_data.empty:
-        fig_corr.add_trace(go.Scatter(
-            x=selected_data[f'{selected_year}_pop'],
-            y=selected_data[f'{selected_year}_housing'],
-            mode='markers',
-            marker=dict(
-                color='red',
-                size=12,
-                line=dict(width=2, color='black')
-            ),
-            name=f"Выбранный пункт: {selected_location}",
-            hoverinfo='text',
-            hovertext=f"{selected_location}<br>{correlation_topic}: {selected_data[f'{selected_year}_pop'].values[0]}<br>Жилье: {selected_data[f'{selected_year}_housing'].values[0]}"
-        ))
-    
-    st.plotly_chart(fig_corr, use_container_width=True)
+    try:
+        # Получаем данные для выбранной категории и жилья
+        topic_df, topic_color = data_dict[correlation_topic]
+        housing_df, housing_color = data_dict["Общая площадь жилых помещений"]
+        
+        # Объединяем данные, удаляем строки с пропущенными значениями
+        merged = pd.merge(
+            topic_df[['Name', selected_year]],
+            housing_df[['Name', selected_year]],
+            on='Name',
+            suffixes=('_pop', '_housing')
+        ).dropna()
+        
+        # Проверяем, что остались данные для анализа
+        if len(merged) < 2:
+            st.warning("Недостаточно данных для вычисления корреляции. Требуется минимум 2 точки.")
+            return
+        
+        # Преобразуем данные в числовой формат (на случай, если они загружены как строки)
+        merged[f'{selected_year}_pop'] = pd.to_numeric(merged[f'{selected_year}_pop'].astype(str).str.replace(',', '.'), errors='coerce')
+        merged[f'{selected_year}_housing'] = pd.to_numeric(merged[f'{selected_year}_housing'].astype(str).str.replace(',', '.'), errors='coerce')
+        
+        # Удаляем строки с NaN после преобразования
+        merged = merged.dropna()
+        
+        # Рассчитываем корреляцию
+        corr = np.corrcoef(merged[f'{selected_year}_pop'], merged[f'{selected_year}_housing'])[0, 1]
+        
+        # Создаем график рассеяния
+        fig_corr = px.scatter(
+            merged,
+            x=f'{selected_year}_pop',
+            y=f'{selected_year}_housing',
+            hover_data=['Name'],
+            labels={
+                f'{selected_year}_pop': f'{correlation_topic} (чел.)',
+                f'{selected_year}_housing': 'Общая площадь жилья (кв.м/чел.)'
+            },
+            trendline="ols",
+            color_discrete_sequence=[topic_color]
+        )
+        
+        # Добавляем информацию о корреляции
+        fig_corr.update_layout(
+            title=f"Коэффициент корреляции: {corr:.2f}",
+            height=600
+        )
+        
+        # Добавляем точку для выбранного населенного пункта
+        selected_data = merged[merged['Name'] == selected_location]
+        if not selected_data.empty:
+            fig_corr.add_trace(go.Scatter(
+                x=selected_data[f'{selected_year}_pop'],
+                y=selected_data[f'{selected_year}_housing'],
+                mode='markers',
+                marker=dict(
+                    color='red',
+                    size=12,
+                    line=dict(width=2, color='black')
+                ),
+                name=f"Выбранный пункт: {selected_location}",
+                hoverinfo='text',
+                hovertext=f"{selected_location}<br>{correlation_topic}: {selected_data[f'{selected_year}_pop'].values[0]:.2f}<br>Жилье: {selected_data[f'{selected_year}_housing'].values[0]:.2f}"
+            ))
+        
+        st.plotly_chart(fig_corr, use_container_width=True)
+        
+    except Exception as e:
+        st.error(f"Ошибка при вычислении корреляции: {str(e)}")
+        st.write("Проверьте, что данные в файлах имеют правильный числовой формат.")
 
 # 6. Экспорт данных
 st.subheader("📤 Экспорт данных")
