@@ -1,3 +1,4 @@
+import base64  # Добавьте эту строку в начало файла, вместе с другими импортами
 import streamlit as st
 import pandas as pd
 import plotly.express as px
