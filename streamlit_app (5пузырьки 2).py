@@ -229,28 +229,28 @@ if selected_topics:
     
     st.plotly_chart(fig, use_container_width=True, key="bubble_chart")
 # 2. График долей для выбранного пункта
-if share_topics and "Среднегодовая численность" in population_data_dict:
+if share_topic and "Среднегодовая численность" in population_data_dict:  # Изменено
     st.subheader(f"Доля от общей численности в {selected_location}")
     fig_percent = go.Figure()
     
     rpop_data = population_data_dict["Среднегодовая численность"][0]
     rpop_values = rpop_data[rpop_data['Name'] == selected_location][available_years].values.flatten()
     
-    for topic in share_topics:
-        df, color = population_data_dict[topic]
-        values = df[df['Name'] == selected_location][available_years].values.flatten()
-        
-        percentages = [round((v/rpop)*100, 2) if rpop !=0 else 0 
-                     for v, rpop in zip(values, rpop_values)]
-        
-        fig_percent.add_trace(go.Scatter(
-            x=available_years,
-            y=percentages,
-            name=f"{topic} (%)",
-            line=dict(color=color, width=3),
-            mode='lines+markers',
-            hovertemplate="<b>%{x}</b><br>%{y:.2f}%<extra></extra>"
-        ))
+    # Убрали цикл, так как теперь одна категория
+    df, color = population_data_dict[share_topic]  # Изменено
+    values = df[df['Name'] == selected_location][available_years].values.flatten()
+    
+    percentages = [round((v/rpop)*100, 2) if rpop !=0 else 0 
+                 for v, rpop in zip(values, rpop_values)]
+    
+    fig_percent.add_trace(go.Scatter(
+        x=available_years,
+        y=percentages,
+        name=f"{share_topic} (%)",  # Изменено
+        line=dict(color=color, width=3),
+        mode='lines+markers',
+        hovertemplate="<b>%{x}</b><br>%{y:.2f}%<extra></extra>"
+    ))
     
     fig_percent.update_layout(
         xaxis_title="Год",
@@ -263,8 +263,8 @@ if share_topics and "Среднегодовая численность" in popul
     st.plotly_chart(fig_percent, use_container_width=True)
 
 # 3. График долей по всем населённым пунктам
-if share_topics and len(share_topics) == 1 and "Среднегодовая численность" in population_data_dict:
-    st.subheader(f"Сравнение долей {share_topics[0]} по населённым пунктам ({selected_year} год)")
+if share_topic and "Среднегодовая численность" in population_data_dict:  # Убрали проверку len()
+    st.subheader(f"Сравнение долей {share_topic} по населённым пунктам ({selected_year} год)") 
     
     topic_df, topic_color = population_data_dict[share_topics[0]]
     rpop_df = population_data_dict["Среднегодовая численность"][0]
