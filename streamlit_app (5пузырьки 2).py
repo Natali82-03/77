@@ -312,8 +312,7 @@ if correlation_topic_housing:
             suffixes=('_pop', '_housing')
         ).dropna()
         
-        # ... остальной код остается без изменений ...
-        
+         
         # Проверяем, что остались данные для анализа
         if len(merged) < 2:
             st.warning("Недостаточно данных для вычисления корреляции. Требуется минимум 2 точки.")
@@ -344,7 +343,7 @@ if correlation_topic_housing:
                     y=f'{selected_year}_housing',
                     hover_data=['Name'],
                     labels={
-                        f'{selected_year}_pop': f'{correlation_topic} (чел.)',
+                        f'{selected_year}_pop': f'{correlation_topic_housing} (чел.)',
                         f'{selected_year}_housing': 'Общая площадь жилья (кв.м/чел.)'
                     },
                     trendline="ols",
@@ -371,7 +370,7 @@ if correlation_topic_housing:
                         ),
                         name=f"Выбранный пункт: {selected_location}",
                         hoverinfo='text',
-                        hovertext=f"{selected_location}<br>{correlation_topic}: {selected_data[f'{selected_year}_pop'].values[0]:.2f}<br>Жилье: {selected_data[f'{selected_year}_housing'].values[0]:.2f}"
+                        hovertext=f"{selected_location}<br>{correlation_topic_housing}: {selected_data[f'{selected_year}_pop'].values[0]:.2f}<br>Жилье: {selected_data[f'{selected_year}_housing'].values[0]:.2f}"
                     ))
                 
                 st.plotly_chart(fig_corr, use_container_width=True)
