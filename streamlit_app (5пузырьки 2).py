@@ -104,7 +104,7 @@ available_years = get_available_years(population_data_dict)
 # --- Боковая панель с логотипом и настройками ---
 with st.sidebar:
     # Логотип с выравниванием по центру
-    col1, col2, col3 = st.columns([1, 3, 1])
+    col1, col2, col3 = st.columns([2, 4, 2])
     with col2:
         st.image("ogm.png", width=900)  # Ширину можно менять
     
