@@ -6,8 +6,44 @@ import chardet
 from io import BytesIO
 import numpy as np
 
-# Конфигурация страницы
+# --- Настройка страницы ---
 st.set_page_config(layout="wide", page_title="Демография Орловской области")
+
+# --- Функция для фона с оверлеем ---
+def set_custom_style(image_path, overlay_opacity=0.7):
+    with open(image_path, "rb") as f:
+        img_data = f.read()
+    img_base64 = base64.b64encode(img_data).decode("utf-8")
+    
+    css = f"""
+    <style>
+    .stApp {{
+        background-image: url("data:image/jpg;base64,{img_base64}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+    }}
+    .stApp::before {{
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, {overlay_opacity});
+        z-index: -1;
+    }}
+    /* Улучшение читаемости текста */
+    .stMarkdown, .stTextInput, .stSelectbox, .stSlider {{
+        position: relative;
+        z-index: 1;
+    }}
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
+
+# Устанавливаем фон с оверлеем (opacity=0.85 - регулируемая прозрачность)
+set_custom_style("fon.jpg", overlay_opacity=0.85)
 
 # --- Загрузка данных ---
 @st.cache_data
@@ -64,19 +100,29 @@ investment_data = (investment, "#17becf")
 
 available_years = get_available_years(population_data_dict)
 
-# --- Боковая панель ---
+# --- Боковая панель с логотипом и настройками ---
 with st.sidebar:
+    # Логотип с выравниванием по центру
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.image("ogm.png", width=150)  # Ширину можно менять
+    
+    st.markdown("---")  # Разделительная линия
     st.title("Настройки анализа")
     
+    # Выбор населенного пункта
     all_locations = ch_1_6['Name'].unique()
     selected_location = st.selectbox("Населённый пункт:", all_locations, index=0)
     
+    # Выбор категорий населения
     selected_topics = st.multiselect(
         "Категории населения:",
         list(population_data_dict.keys()),
         default=["Дети 1-6 лет", "Среднегодовая численность"]
     )
     
+    # Анализ долей
+    st.markdown("---")
     st.title("Доля от общей численности")
     share_topics = st.multiselect(
         "Выберите категории для анализа долей:",
@@ -84,25 +130,28 @@ with st.sidebar:
         default=["Дети 1-6 лет"]
     )
     
+    # Выбор года
     selected_year = st.selectbox(
         "Год для анализа:",
         available_years,
         index=len(available_years)-1
     )
     
-    # Блок для выбора категории для корреляции с жильем
+    # Корреляция с жильем
+    st.markdown("---")
     st.title("Корреляция с жильем")
     correlation_topic_housing = st.selectbox(
-        "Выберите категорию для корреляции с жильем:",
+        "Выберите категорию для корреляции:",
         list(population_data_dict.keys()),
         index=0,
         key="housing_corr_select"
     )
     
-    # Блок для выбора категории для корреляции с инвестициями
+    # Корреляция с инвестициями
+    st.markdown("---")
     st.title("Корреляция с инвестициями")
     correlation_topic_investment = st.selectbox(
-        "Выберите категорию для корреляции с инвестициями:",
+        "Выберите категорию для корреляции:",
         list(population_data_dict.keys()),
         index=0,
         key="investment_corr_select"
