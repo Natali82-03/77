@@ -102,12 +102,13 @@ investment_data = (investment, "#17becf")
 available_years = get_available_years(population_data_dict)
 
 # --- Боковая панель с логотипом и настройками ---
-with st.sidebar:
+#with st.sidebar:
     # Логотип с выравниванием по центру
-    col1, col2, col3 = st.columns([1, 7, 1])
-    with col2:
-        st.image("ogm.png", width=900)  # Ширину можно менять
-    
+    #col1, col2, col3 = st.columns([1, 7, 1])
+    #with col2:
+        #st.image("ogm.png", width=900)  # Ширину можно менять
+with st.sidebar:
+    st.image("ogm.png", use_column_width=True)
     # Выбор населенного пункта
     all_locations = ch_1_6['Name'].unique()
     selected_location = st.selectbox("Населённый пункт:", all_locations, index=0)
