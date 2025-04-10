@@ -263,8 +263,8 @@ if share_topic and "Среднегодовая численность" in popula
     st.plotly_chart(fig_percent, use_container_width=True)
 
 # 3. График долей по всем населённым пунктам
-if share_topic and "Среднегодовая численность" in population_data_dict:  # Убрали проверку len()
-    st.subheader(f"Сравнение долей {share_topic} по населённым пунктам ({selected_year} год)") 
+if share_topic and "Среднегодовая численность" in population_data_dict:
+    st.subheader(f"Сравнение долей {share_topic} по населённым пунктам ({selected_year} год)")
     
     topic_df, topic_color = population_data_dict[share_topic]
     rpop_df = population_data_dict["Среднегодовая численность"][0]
@@ -290,7 +290,7 @@ if share_topic and "Среднегодовая численность" in popula
     
     fig_all.update_layout(
         xaxis_title="Населённый пункт",
-        yaxis_title=f"Доля {share_topics[0]} от общей численности (%)",
+        yaxis_title=f"Доля {share_topic} от общей численности (%)",  # Исправлено здесь
         xaxis={'categoryorder':'total descending'},
         hovermode="x",
         showlegend=False
