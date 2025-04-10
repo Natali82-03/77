@@ -4,3 +4,6 @@ plotly==5.18.0
 numpy==1.26.2
 chardet==5.2.0
 openpyxl==3.1.2
+scikit-learn>=1.0.0
+openpyxl>=3.0.0
+statsmodels>=0.13.0
