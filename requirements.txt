@@ -7,3 +7,4 @@ openpyxl==3.1.2
 scikit-learn>=1.0.0
 openpyxl>=3.0.0
 statsmodels>=0.13.0
+Pillow>=9.0.0  # Для работы с изображениями (логотип, фон)
