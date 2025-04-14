@@ -119,7 +119,7 @@ with st.sidebar:
         default=["Дети 1-6 лет", "Среднегодовая численность"]
     )
     
-    # Анализ долей (ТЕПЕРЬ ТОЛЬКО 1 КАТЕГОРИЯ)
+    # Анализ долей - ТОЛЬКО 1 КАТЕГОРИЯ, много не надо, путаются данные, и Юля тоже
     st.markdown("---")
     st.title("Доля от общей численности")
     share_topic = st.selectbox(  # Изменено на selectbox вместо multiselect
@@ -128,14 +128,14 @@ with st.sidebar:
         index=0  # Первая категория выбрана по умолчанию
     )
     
-    # Выбор года
+    # Выбор года,миитпрпрьмлблрьп
     selected_year = st.selectbox(
         "Год для анализа:",
         available_years,
         index=len(available_years)-1
     )
     
-    # Корреляция с жильем
+    # Корреляция с жильем, зависит ли от наличия квадратнгых метров рождаемость
     st.markdown("---")
     st.title("Корреляция с жильем")
     correlation_topic_housing = st.selectbox(
@@ -228,12 +228,13 @@ if selected_topics:
         )
     
     st.plotly_chart(fig, use_container_width=True, key="bubble_chart")
-# 2. График долей для выбранного пункта
-if share_topic and "Среднегодовая численность" in population_data_dict:  # Изменено
+
+# 2. График долей для выбранного пункта категории населения
+if share_topic and "Средняя численность населения" in population_data_dict:  # Изменено
     st.subheader(f"Доля от общей численности в {selected_location}")
     fig_percent = go.Figure()
     
-    rpop_data = population_data_dict["Среднегодовая численность"][0]
+    rpop_data = population_data_dict["Среднегодовая численность населения целиком"][0]
     rpop_values = rpop_data[rpop_data['Name'] == selected_location][available_years].values.flatten()
     
     # Убрали цикл, так как теперь одна категория
@@ -263,7 +264,7 @@ if share_topic and "Среднегодовая численность" in popula
     st.plotly_chart(fig_percent, use_container_width=True)
 
 # 3. График долей по всем населённым пунктам
-if share_topic and "Среднегодовая численность" in population_data_dict:
+if share_topic and "Среднегодовая численность населения целиком" in population_data_dict:
     st.subheader(f"Сравнение долей {share_topic} по населённым пунктам ({selected_year} год)")
     
     topic_df, topic_color = population_data_dict[share_topic]
