@@ -158,72 +158,122 @@ with st.sidebar:
 # --- Основной интерфейс ---
 st.title(f"📊 Демографические показатели: {selected_location}")
 
-# 1. ДИАГРАММА "СОЛНЕЧНЫЕ ЛУЧИ" (SUNBURST)
+# 1. УЛУЧШЕННАЯ SUNBURST-ДИАГРАММА
 if selected_topics and selected_year:
     st.subheader(f"Иерархическая структура населения ({selected_year} год)")
     
-    # Подготовка данных для sunburst
+    # Подготовка данных
+    total_population = 0
     sunburst_data = {
-        'labels': [selected_location, *selected_topics],
-        'parents': ['', *[selected_location]*len(selected_topics)],
+        'labels': [selected_location],
+        'parents': [''],
         'values': [],
-        'textinfo': 'label+percent parent+value',
-        'marker': {'colors': []}
+        'customdata': [],
+        'marker': {'colors': ['#636EFA']},
+        'text': ['Все население'],
+        'hovertemplate': []
     }
     
-    # Получаем значения для каждого показателя
+    # Собираем данные по категориям
     for topic in selected_topics:
         df, color = population_data_dict[topic]
         value = df[df['Name'] == selected_location][selected_year].values[0]
         
-        # Обработка чисел в строковом формате (с запятыми)
         if isinstance(value, str):
             try:
                 value = float(value.replace(',', '.'))
             except:
                 value = 0
         
+        sunburst_data['labels'].append(topic)
+        sunburst_data['parents'].append(selected_location)
         sunburst_data['values'].append(value)
         sunburst_data['marker']['colors'].append(color)
+        sunburst_data['customdata'].append(f"{value:,.0f}")
+        total_population += value
     
-    # Добавляем корневой элемент (общее значение)
-    sunburst_data['values'].insert(0, sum(sunburst_data['values']))
-    sunburst_data['marker']['colors'].insert(0, '#636EFA')  # Цвет для корневого элемента
+    # Обновляем корневое значение
+    sunburst_data['values'].insert(0, total_population)
     
-    # Создаем диаграмму
+    # Создаем диаграмму с эффектом "взрыва"
     fig = go.Figure(go.Sunburst(
         labels=sunburst_data['labels'],
         parents=sunburst_data['parents'],
         values=sunburst_data['values'],
         branchvalues="total",
         marker=sunburst_data['marker'],
-        textinfo="label+percent parent+value",
-        hovertemplate='<b>%{label}</b><br>' +
-                     'Численность: %{value:,}<br>' +
-                     'Доля: %{percentParent:.1%}',
-        insidetextorientation='radial'
+        text=sunburst_data['labels'],
+        textinfo="label+percent parent",
+        textfont=dict(size=14),
+        hovertemplate=(
+            "<b>%{label}</b><br>"
+            "Численность: %{value:,}<br>"
+            "Доля: %{percentParent:.1%}<br>"
+            "<extra></extra>"
+        ),
+        insidetextorientation='radial',
+        maxdepth=2,
+        rotation=90  # Поворот для лучшего отображения названий
     ))
     
-    # Настраиваем внешний вид
-    fig.update_layout(
-        margin=dict(t=30, l=0, r=0, b=0),
-        height=600,
-        title_text=f"Структура населения в {selected_location} ({selected_year} год)",
-        title_x=0.5
+    # Добавляем тень и свечение
+    fig.update_traces(
+        marker=dict(
+            line=dict(width=2, color='white'),
+            colors=sunburst_data['marker']['colors']
+        )
     )
     
-    # Добавляем пояснение
-    st.markdown("""
-    <div style="background-color:#f0f2f6; padding:10px; border-radius:5px; margin-bottom:20px;">
-    <small>💡 <b>Как читать диаграмму:</b><br>
-    • Центральный круг — весь населенный пункт<br>
-    • Сектора — доли каждой категории населения<br>
-    • Размер сектора соответствует численности группы<br>
-    • Наведите курсор для детальной информации</small>
-    </div>
-    """, unsafe_allow_html=True)
+    # Настройка внешнего вида
+    fig.update_layout(
+        margin=dict(t=80, l=0, r=0, b=30),
+        height=650,
+        title_text=(
+            f"<b>Структура населения в {selected_location}</b><br>"
+            f"<sup>{selected_year} год | Всего: {total_population:,.0f} чел.</sup>"
+        ),
+        title_x=0.5,
+        title_y=0.97,
+        title_font=dict(size=20),
+        uniformtext=dict(minsize=12, mode='hide'),
+        annotations=[
+            dict(
+                text=f"Всего: {total_population:,.0f} чел.",
+                x=0.5,
+                y=-0.05,
+                xref="paper",
+                yref="paper",
+                showarrow=False,
+                font=dict(size=12)
+            )
+        ]
+    )
     
-    st.plotly_chart(fig, use_container_width=True, key="sunburst_chart")
+    # Информационный блок с пояснениями
+    with st.expander("ℹ️ Как пользоваться диаграммой", expanded=True):
+        st.markdown("""
+        <div style="background-color:#f8f9fa; padding:15px; border-radius:8px;">
+        <ul style="margin-bottom:0;">
+            <li><b>Центральный круг</b> — весь населенный пункт (100% населения)</li>
+            <li><b>Цветные сектора</b> — группы населения (размер = численность)</li>
+            <li><b>Наведите курсор</b> — увидите точные значения и доли</li>
+            <li><b>Кликайте по секторам</b> — чтобы временно изолировать группу</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    
+    # Добавляем кнопку скачивания изображения
+    st.markdown("---")
+    col1, col2 = st.columns([3, 1])
+    with col2:
+        st.download_button(
+            label="📥 Сохранить диаграмму",
+            data=fig.to_image(format="png", width=1000, height=650),
+            file_name=f"Демография_{selected_location}_{selected_year}.png",
+            mime="image/png"
+        )
 # 2. График долей для выбранного пункта категории населения
 if share_topic and "Среднегодовая численность" in population_data_dict:  # Исправлено здесь
     st.subheader(f"Доля от общей численности в {selected_location}")
