@@ -230,15 +230,15 @@ if selected_topics:
     st.plotly_chart(fig, use_container_width=True, key="bubble_chart")
 
 # 2. График долей для выбранного пункта категории населения
-if share_topic and "Средняя численность населения" in population_data_dict:  # Изменено
+if share_topic and "Среднегодовая численность" in population_data_dict:  # Исправлено здесь
     st.subheader(f"Доля от общей численности в {selected_location}")
     fig_percent = go.Figure()
     
-    rpop_data = population_data_dict["Среднегодовая численность населения целиком"][0]
+    rpop_data = population_data_dict["Среднегодовая численность"][0]  # Исправлено здесь
     rpop_values = rpop_data[rpop_data['Name'] == selected_location][available_years].values.flatten()
     
     # Убрали цикл, так как теперь одна категория
-    df, color = population_data_dict[share_topic]  # Изменено
+    df, color = population_data_dict[share_topic]
     values = df[df['Name'] == selected_location][available_years].values.flatten()
     
     percentages = [round((v/rpop)*100, 2) if rpop !=0 else 0 
@@ -247,7 +247,7 @@ if share_topic and "Средняя численность населения" in
     fig_percent.add_trace(go.Scatter(
         x=available_years,
         y=percentages,
-        name=f"{share_topic} (%)",  # Изменено
+        name=f"{share_topic} (%)",
         line=dict(color=color, width=3),
         mode='lines+markers',
         hovertemplate="<b>%{x}</b><br>%{y:.2f}%<extra></extra>"
@@ -264,7 +264,7 @@ if share_topic and "Средняя численность населения" in
     st.plotly_chart(fig_percent, use_container_width=True)
 
 # 3. График долей по всем населённым пунктам
-if share_topic and "Среднегодовая численность населения целиком" in population_data_dict:
+if share_topic and "Среднегодовая численность" in population_data_dict:  # Исправлено здесь
     st.subheader(f"Сравнение долей {share_topic} по населённым пунктам ({selected_year} год)")
     
     topic_df, topic_color = population_data_dict[share_topic]
@@ -291,7 +291,7 @@ if share_topic and "Среднегодовая численность насел
     
     fig_all.update_layout(
         xaxis_title="Населённый пункт",
-        yaxis_title=f"Доля {share_topic} от общей численности (%)",  # Исправлено здесь
+        yaxis_title=f"Доля {share_topic} от общей численности (%)",
         xaxis={'categoryorder':'total descending'},
         hovermode="x",
         showlegend=False
