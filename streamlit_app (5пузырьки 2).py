@@ -158,122 +158,77 @@ with st.sidebar:
 # --- Основной интерфейс ---
 st.title(f"📊 Демографические показатели: {selected_location}")
 
-# 1. УЛУЧШЕННАЯ SUNBURST-ДИАГРАММА
-if selected_topics and selected_year:
-    st.subheader(f"Иерархическая структура населения ({selected_year} год)")
+# 1. Пузырьковый график динамики численности
+if selected_topics:
+    st.subheader("Динамика численности населения")
     
-    # Подготовка данных
-    total_population = 0
-    sunburst_data = {
-        'labels': [selected_location],
-        'parents': [''],
-        'values': [],
-        'customdata': [],
-        'marker': {'colors': ['#636EFA']},
-        'text': ['Все население'],
-        'hovertemplate': []
-    }
+    years_list = []
+    categories_list = []
+    values_list = []
+    colors_list = []
     
-    # Собираем данные по категориям
-    for topic in selected_topics:
-        df, color = population_data_dict[topic]
-        value = df[df['Name'] == selected_location][selected_year].values[0]
+    for year in available_years:
+        for topic in selected_topics:
+            df, color = population_data_dict[topic]
+            value = df[df['Name'] == selected_location][year].values[0]
+            years_list.append(year)
+            categories_list.append(topic)
+            values_list.append(value)
+            colors_list.append(color)
+    
+    fig = go.Figure()
+    
+    for i, year in enumerate(available_years):
+        year_mask = [y == year for y in years_list]
+        year_categories = [c for c, mask in zip(categories_list, year_mask) if mask]
+        year_values = [v for v, mask in zip(values_list, year_mask) if mask]
+        year_colors = [c for c, mask in zip(colors_list, year_mask) if mask]
         
-        if isinstance(value, str):
-            try:
-                value = float(value.replace(',', '.'))
-            except:
-                value = 0
-        
-        sunburst_data['labels'].append(topic)
-        sunburst_data['parents'].append(selected_location)
-        sunburst_data['values'].append(value)
-        sunburst_data['marker']['colors'].append(color)
-        sunburst_data['customdata'].append(f"{value:,.0f}")
-        total_population += value
+        fig.add_trace(go.Scatter(
+            x=[i]*len(year_categories),
+            y=year_categories,
+            text=year_values,
+            mode='markers',
+            marker=dict(
+                size=year_values,
+                sizemode='area',
+                sizeref=2.*max(values_list)/(40.**2),
+                sizemin=4,
+                color=year_colors,
+                opacity=0.7,
+                line=dict(width=1, color='DarkSlateGrey')
+            ),
+            name=str(year),
+            hovertemplate="<b>%{y}</b><br>Год: %{text}<br>Численность: %{marker.size:,} чел.<extra></extra>"
+        ))
     
-    # Обновляем корневое значение
-    sunburst_data['values'].insert(0, total_population)
-    
-    # Создаем диаграмму с эффектом "взрыва"
-    fig = go.Figure(go.Sunburst(
-        labels=sunburst_data['labels'],
-        parents=sunburst_data['parents'],
-        values=sunburst_data['values'],
-        branchvalues="total",
-        marker=sunburst_data['marker'],
-        text=sunburst_data['labels'],
-        textinfo="label+percent parent",
-        textfont=dict(size=14),
-        hovertemplate=(
-            "<b>%{label}</b><br>"
-            "Численность: %{value:,}<br>"
-            "Доля: %{percentParent:.1%}<br>"
-            "<extra></extra>"
-        ),
-        insidetextorientation='radial',
-        maxdepth=2,
-        rotation=90  # Поворот для лучшего отображения названий
-    ))
-    
-    # Добавляем тень и свечение
-    fig.update_traces(
-        marker=dict(
-            line=dict(width=2, color='white'),
-            colors=sunburst_data['marker']['colors']
-        )
-    )
-    
-    # Настройка внешнего вида
     fig.update_layout(
-        margin=dict(t=80, l=0, r=0, b=30),
-        height=650,
-        title_text=(
-            f"<b>Структура населения в {selected_location}</b><br>"
-            f"<sup>{selected_year} год | Всего: {total_population:,.0f} чел.</sup>"
+        xaxis=dict(
+            tickvals=list(range(len(available_years))),
+            ticktext=available_years,
+            title="Год"
         ),
-        title_x=0.5,
-        title_y=0.97,
-        title_font=dict(size=20),
-        uniformtext=dict(minsize=12, mode='hide'),
-        annotations=[
-            dict(
-                text=f"Всего: {total_population:,.0f} чел.",
-                x=0.5,
-                y=-0.05,
-                xref="paper",
-                yref="paper",
-                showarrow=False,
-                font=dict(size=12)
-            )
-        ]
+        yaxis=dict(
+            title="Категория",
+            categoryorder='array',
+            categoryarray=selected_topics
+        ),
+        hovermode="closest",
+        showlegend=False,
+        height=600,
+        template="plotly_white"
     )
     
-    # Информационный блок с пояснениями
-    with st.expander("ℹ️ Как пользоваться диаграммой", expanded=True):
-        st.markdown("""
-        <div style="background-color:#f8f9fa; padding:15px; border-radius:8px;">
-        <ul style="margin-bottom:0;">
-            <li><b>Центральный круг</b> — весь населенный пункт (100% населения)</li>
-            <li><b>Цветные сектора</b> — группы населения (размер = численность)</li>
-            <li><b>Наведите курсор</b> — увидите точные значения и доли</li>
-            <li><b>Кликайте по секторам</b> — чтобы временно изолировать группу</li>
-        </ul>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-    
-    # Добавляем кнопку скачивания изображения
-    st.markdown("---")
-    col1, col2 = st.columns([3, 1])
-    with col2:
-        st.download_button(
-            label="📥 Сохранить диаграмму",
-            data=fig.to_image(format="png", width=1000, height=650),
-            file_name=f"Демография_{selected_location}_{selected_year}.png",
-            mime="image/png"
+    for i in range(len(available_years)):
+        fig.add_vline(
+            x=i-0.5,
+            line_width=1,
+            line_dash="dot",
+            line_color="grey"
         )
+    
+    st.plotly_chart(fig, use_container_width=True, key="bubble_chart")
+
 # 2. График долей для выбранного пункта категории населения
 if share_topic and "Среднегодовая численность" in population_data_dict:  # Исправлено здесь
     st.subheader(f"Доля от общей численности в {selected_location}")
