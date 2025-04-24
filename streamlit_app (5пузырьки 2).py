@@ -158,76 +158,94 @@ with st.sidebar:
 # --- Основной интерфейс ---
 st.title(f"📊 Демографические показатели: {selected_location}")
 
-# 1. Пузырьковый график динамики численности
+# 1. АНИМИРОВАННЫЙ ЛИНЕЙНЫЙ ГРАФИК С ОБЛАСТЯМИ (заменяет пузырьковый график)
 if selected_topics:
     st.subheader("Динамика численности населения")
     
-    years_list = []
-    categories_list = []
-    values_list = []
-    colors_list = []
+    # Подготовка данных в длинном формате
+    plot_data = []
     
-    for year in available_years:
-        for topic in selected_topics:
-            df, color = population_data_dict[topic]
-            value = df[df['Name'] == selected_location][year].values[0]
-            years_list.append(year)
-            categories_list.append(topic)
-            values_list.append(value)
-            colors_list.append(color)
-    
-    fig = go.Figure()
-    
-    for i, year in enumerate(available_years):
-        year_mask = [y == year for y in years_list]
-        year_categories = [c for c, mask in zip(categories_list, year_mask) if mask]
-        year_values = [v for v, mask in zip(values_list, year_mask) if mask]
-        year_colors = [c for c, mask in zip(colors_list, year_mask) if mask]
+    for topic in selected_topics:
+        df, color = population_data_dict[topic]
+        location_data = df[df['Name'] == selected_location]
         
-        fig.add_trace(go.Scatter(
-            x=[i]*len(year_categories),
-            y=year_categories,
-            text=year_values,
-            mode='markers',
-            marker=dict(
-                size=year_values,
-                sizemode='area',
-                sizeref=2.*max(values_list)/(40.**2),
-                sizemin=4,
-                color=year_colors,
-                opacity=0.7,
-                line=dict(width=1, color='DarkSlateGrey')
-            ),
-            name=str(year),
-            hovertemplate="<b>%{y}</b><br>Год: %{text}<br>Численность: %{marker.size:,} чел.<extra></extra>"
-        ))
+        for year in available_years:
+            value = location_data[year].values[0]
+            if isinstance(value, (str)):
+                value = float(value.replace(',', '.'))  # Обработка чисел с запятыми
+                
+            plot_data.append({
+                'Год': int(year),
+                'Категория': topic,
+                'Численность': value,
+                'Цвет': color
+            })
     
-    fig.update_layout(
-        xaxis=dict(
-            tickvals=list(range(len(available_years))),
-            ticktext=available_years,
-            title="Год"
-        ),
-        yaxis=dict(
-            title="Категория",
-            categoryorder='array',
-            categoryarray=selected_topics
-        ),
-        hovermode="closest",
-        showlegend=False,
-        height=600,
-        template="plotly_white"
+    plot_df = pd.DataFrame(plot_data)
+    
+    # Создаем анимированный график
+    fig = px.area(
+        plot_df,
+        x='Год',
+        y='Численность',
+        color='Категория',
+        color_discrete_map={row['Категория']: row['Цвет'] for _, row in plot_df.drop_duplicates('Категория').iterrows()},
+        title=f"Динамика численности населения в {selected_location}",
+        animation_frame='Год',
+        range_y=[0, plot_df['Численность'].max() * 1.1],
+        template='plotly_white',
+        height=600
     )
     
-    for i in range(len(available_years)):
+    # Настраиваем анимацию
+    fig.update_layout(
+        xaxis_title="Год",
+        yaxis_title="Численность населения",
+        hovermode="x unified",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        transition={'duration': 1000},
+        updatemenus=[{
+            'buttons': [{
+                'args': [None, {
+                    'frame': {'duration': 1000, 'redraw': True},
+                    'fromcurrent': True,
+                    'transition': {'duration': 500}
+                }],
+                'label': '▶️ Воспроизвести',
+                'method': 'animate'
+            }],
+            'direction': 'left',
+            'pad': {'r': 10, 't': 87},
+            'showactive': False,
+            'type': 'buttons',
+            'x': 0.1,
+            'y': 0
+        }]
+    )
+    
+    # Дополнительные улучшения
+    fig.update_traces(
+        mode='lines+markers',
+        marker=dict(size=8),
+        hovertemplate='<b>%{x}</b><br>%{y:,} чел.<extra></extra>'
+    )
+    
+    # Добавляем вертикальные линии для каждого года
+    for year in available_years[1:]:
         fig.add_vline(
-            x=i-0.5,
+            x=int(year)-0.5,
             line_width=1,
             line_dash="dot",
             line_color="grey"
         )
     
-    st.plotly_chart(fig, use_container_width=True, key="bubble_chart")
+    st.plotly_chart(fig, use_container_width=True, key="animated_area_chart")
 
 # 2. График долей для выбранного пункта категории населения
 if share_topic and "Среднегодовая численность" in population_data_dict:  # Исправлено здесь
