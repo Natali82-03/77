@@ -158,86 +158,72 @@ with st.sidebar:
 # --- Основной интерфейс ---
 st.title(f"📊 Демографические показатели: {selected_location}")
 
-# --- Основной интерфейс ---
-st.title(f"📊 Демографические показатели: {selected_location}")
-
-# 1. ИНТЕРАКТИВНАЯ ТЕПЛОВАЯ КАРТА (замена пузырьковому графику)
-if selected_topics:
-    st.subheader("Тепловая карта динамики численности населения")
+# 1. ДИАГРАММА "СОЛНЕЧНЫЕ ЛУЧИ" (SUNBURST)
+if selected_topics and selected_year:
+    st.subheader(f"Иерархическая структура населения ({selected_year} год)")
     
-    # Подготовка матрицы данных
-    heatmap_data = []
-    categories = []
+    # Подготовка данных для sunburst
+    sunburst_data = {
+        'labels': [selected_location, *selected_topics],
+        'parents': ['', *[selected_location]*len(selected_topics)],
+        'values': [],
+        'textinfo': 'label+percent parent+value',
+        'marker': {'colors': []}
+    }
     
+    # Получаем значения для каждого показателя
     for topic in selected_topics:
-        df, _ = population_data_dict[topic]
-        location_data = df[df['Name'] == selected_location]
-        row = []
+        df, color = population_data_dict[topic]
+        value = df[df['Name'] == selected_location][selected_year].values[0]
         
-        for year in available_years:
-            value = location_data[year].values[0]
-            # Преобразуем в число, если значение строка (например, с запятыми)
-            if isinstance(value, str):
-                try:
-                    value = float(value.replace(',', '.'))
-                except:
-                    value = 0
-            row.append(value)
+        # Обработка чисел в строковом формате (с запятыми)
+        if isinstance(value, str):
+            try:
+                value = float(value.replace(',', '.'))
+            except:
+                value = 0
         
-        heatmap_data.append(row)
-        categories.append(topic)
+        sunburst_data['values'].append(value)
+        sunburst_data['marker']['colors'].append(color)
     
-    # Создаем тепловую карту
-    fig = go.Figure(data=go.Heatmap(
-        z=heatmap_data,
-        x=available_years,
-        y=categories,
-        colorscale='Viridis',
-        hoverongaps=False,
-        hoverinfo='x+y+z',
-        colorbar=dict(
-            title='Численность',
-            titleside='right'
-        ),
-        text=[[f"{val:,.0f}" for val in row] for row in heatmap_data],
-        texttemplate="%{text}",
-        textfont={"size":10}
+    # Добавляем корневой элемент (общее значение)
+    sunburst_data['values'].insert(0, sum(sunburst_data['values']))
+    sunburst_data['marker']['colors'].insert(0, '#636EFA')  # Цвет для корневого элемента
+    
+    # Создаем диаграмму
+    fig = go.Figure(go.Sunburst(
+        labels=sunburst_data['labels'],
+        parents=sunburst_data['parents'],
+        values=sunburst_data['values'],
+        branchvalues="total",
+        marker=sunburst_data['marker'],
+        textinfo="label+percent parent+value",
+        hovertemplate='<b>%{label}</b><br>' +
+                     'Численность: %{value:,}<br>' +
+                     'Доля: %{percentParent:.1%}',
+        insidetextorientation='radial'
     ))
     
     # Настраиваем внешний вид
     fig.update_layout(
-        title=f"Тепловая карта численности населения в {selected_location}",
-        xaxis_title="Год",
-        yaxis_title="Категория населения",
+        margin=dict(t=30, l=0, r=0, b=0),
         height=600,
-        hovermode="closest",
-        yaxis=dict(
-            tickmode='array',
-            tickvals=list(range(len(categories))),
-            ticktext=categories
-        ),
-        margin=dict(l=100, r=100, t=80, b=100)
+        title_text=f"Структура населения в {selected_location} ({selected_year} год)",
+        title_x=0.5
     )
     
-    # Добавляем аннотации (числа в ячейках)
-    annotations = []
-    for y in range(len(heatmap_data)):
-        for x in range(len(heatmap_data[0])):
-            annotations.append(
-                dict(
-                    xref='x1',
-                    yref='y1',
-                    x=available_years[x],
-                    y=categories[y],
-                    text=f"{heatmap_data[y][x]:,.0f}",
-                    font=dict(color='white' if heatmap_data[y][x] > np.max(heatmap_data)/2 else 'black'),
-                    showarrow=False
-                )
-            )
-    fig.update_layout(annotations=annotations)
+    # Добавляем пояснение
+    st.markdown("""
+    <div style="background-color:#f0f2f6; padding:10px; border-radius:5px; margin-bottom:20px;">
+    <small>💡 <b>Как читать диаграмму:</b><br>
+    • Центральный круг — весь населенный пункт<br>
+    • Сектора — доли каждой категории населения<br>
+    • Размер сектора соответствует численности группы<br>
+    • Наведите курсор для детальной информации</small>
+    </div>
+    """, unsafe_allow_html=True)
     
-    st.plotly_chart(fig, use_container_width=True, key="heatmap_chart")
-
+    st.plotly_chart(fig, use_container_width=True, key="sunburst_chart")
 # 2. График долей для выбранного пункта категории населения
 if share_topic and "Среднегодовая численность" in population_data_dict:  # Исправлено здесь
     st.subheader(f"Доля от общей численности в {selected_location}")
