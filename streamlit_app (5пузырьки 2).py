@@ -158,94 +158,85 @@ with st.sidebar:
 # --- Основной интерфейс ---
 st.title(f"📊 Демографические показатели: {selected_location}")
 
-# 1. АНИМИРОВАННЫЙ ЛИНЕЙНЫЙ ГРАФИК С ОБЛАСТЯМИ (заменяет пузырьковый график)
+# --- Основной интерфейс ---
+st.title(f"📊 Демографические показатели: {selected_location}")
+
+# 1. ИНТЕРАКТИВНАЯ ТЕПЛОВАЯ КАРТА (замена пузырьковому графику)
 if selected_topics:
-    st.subheader("Динамика численности населения")
+    st.subheader("Тепловая карта динамики численности населения")
     
-    # Подготовка данных в длинном формате
-    plot_data = []
+    # Подготовка матрицы данных
+    heatmap_data = []
+    categories = []
     
     for topic in selected_topics:
-        df, color = population_data_dict[topic]
+        df, _ = population_data_dict[topic]
         location_data = df[df['Name'] == selected_location]
+        row = []
         
         for year in available_years:
             value = location_data[year].values[0]
-            if isinstance(value, (str)):
-                value = float(value.replace(',', '.'))  # Обработка чисел с запятыми
-                
-            plot_data.append({
-                'Год': int(year),
-                'Категория': topic,
-                'Численность': value,
-                'Цвет': color
-            })
+            # Преобразуем в число, если значение строка (например, с запятыми)
+            if isinstance(value, str):
+                try:
+                    value = float(value.replace(',', '.'))
+                except:
+                    value = 0
+            row.append(value)
+        
+        heatmap_data.append(row)
+        categories.append(topic)
     
-    plot_df = pd.DataFrame(plot_data)
-    
-    # Создаем анимированный график
-    fig = px.area(
-        plot_df,
-        x='Год',
-        y='Численность',
-        color='Категория',
-        color_discrete_map={row['Категория']: row['Цвет'] for _, row in plot_df.drop_duplicates('Категория').iterrows()},
-        title=f"Динамика численности населения в {selected_location}",
-        animation_frame='Год',
-        range_y=[0, plot_df['Численность'].max() * 1.1],
-        template='plotly_white',
-        height=600
-    )
-    
-    # Настраиваем анимацию
-    fig.update_layout(
-        xaxis_title="Год",
-        yaxis_title="Численность населения",
-        hovermode="x unified",
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1
+    # Создаем тепловую карту
+    fig = go.Figure(data=go.Heatmap(
+        z=heatmap_data,
+        x=available_years,
+        y=categories,
+        colorscale='Viridis',
+        hoverongaps=False,
+        hoverinfo='x+y+z',
+        colorbar=dict(
+            title='Численность',
+            titleside='right'
         ),
-        transition={'duration': 1000},
-        updatemenus=[{
-            'buttons': [{
-                'args': [None, {
-                    'frame': {'duration': 1000, 'redraw': True},
-                    'fromcurrent': True,
-                    'transition': {'duration': 500}
-                }],
-                'label': '▶️ Воспроизвести',
-                'method': 'animate'
-            }],
-            'direction': 'left',
-            'pad': {'r': 10, 't': 87},
-            'showactive': False,
-            'type': 'buttons',
-            'x': 0.1,
-            'y': 0
-        }]
+        text=[[f"{val:,.0f}" for val in row] for row in heatmap_data],
+        texttemplate="%{text}",
+        textfont={"size":10}
+    ))
+    
+    # Настраиваем внешний вид
+    fig.update_layout(
+        title=f"Тепловая карта численности населения в {selected_location}",
+        xaxis_title="Год",
+        yaxis_title="Категория населения",
+        height=600,
+        hovermode="closest",
+        yaxis=dict(
+            tickmode='array',
+            tickvals=list(range(len(categories))),
+            ticktext=categories
+        ),
+        margin=dict(l=100, r=100, t=80, b=100)
     )
     
-    # Дополнительные улучшения
-    fig.update_traces(
-        mode='lines+markers',
-        marker=dict(size=8),
-        hovertemplate='<b>%{x}</b><br>%{y:,} чел.<extra></extra>'
-    )
+    # Добавляем аннотации (числа в ячейках)
+    annotations = []
+    for y in range(len(heatmap_data)):
+        for x in range(len(heatmap_data[0])):
+            annotations.append(
+                dict(
+                    xref='x1',
+                    yref='y1',
+                    x=available_years[x],
+                    y=categories[y],
+                    text=f"{heatmap_data[y][x]:,.0f}",
+                    font=dict(color='white' if heatmap_data[y][x] > np.max(heatmap_data)/2 else 'black'),
+                    showarrow=False
+                )
+            )
+    fig.update_layout(annotations=annotations)
     
-    # Добавляем вертикальные линии для каждого года
-    for year in available_years[1:]:
-        fig.add_vline(
-            x=int(year)-0.5,
-            line_width=1,
-            line_dash="dot",
-            line_color="grey"
-        )
-    
-    st.plotly_chart(fig, use_container_width=True, key="animated_area_chart")
+    st.plotly_chart(fig, use_container_width=True, key="heatmap_chart")
 
 # 2. График долей для выбранного пункта категории населения
 if share_topic and "Среднегодовая численность" in population_data_dict:  # Исправлено здесь
